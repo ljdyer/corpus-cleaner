@@ -99,8 +99,19 @@ while True:
 
     elif event == "-FIND-":
         find_re = values["-FIND-"]
-        for match in re.finditer(find_re, text):
-            print(match.span())
+        try:
+            text_tagged = re.sub(rf'({find_re})', r'***\1***', text)
+        except re.error:
+            print("Not a valid regex!")
+            continue
+        text_parts = text_tagged.split('***')
+        window["-PREVIEW-"].update("")
+        for index, part in enumerate(text_parts):
+            if index % 2 == 0:            
+                window["-PREVIEW-"].update(part, append=True)
+            else:
+                window["-PREVIEW-"].update(part, background_color_for_value="red", append=True)
+
 
 
     # elif event == "-FILE LIST-":  # A file was chosen from the listbox
