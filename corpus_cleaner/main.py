@@ -1,15 +1,44 @@
 # img_viewer.py
 
-import PySimpleGUI as sg
-import os.path
+import argparse
 import re
+from os.path import join
+
+import PySimpleGUI as sg
+
 from helper.helper import get_text_from_file
+from helper.update_window import (update_files, update_before,
+                                  update_subfolders)
 
-root_folder = ""
-SUBFOLDER = ""
-FILE = ""
+DEBUG_FOLDER = "E:\\TED_Talks"
 
-# First the window layout in 2 columns
+
+# ====================
+def get_args():
+    """Get command-line arguments"""
+
+    parser = argparse.ArgumentParser(
+        description='Corpus Cleaner',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--debug',
+                        action=argparse.BooleanOptionalAction,
+                        type=bool,
+                        help='launch in debug mode')
+    parser.set_defaults(debug=False)
+    return parser.parse_args()
+
+
+# def log_instances(regex: str, subfolder_path: str) -> dict:
+#     """Log frequencies of all instances of a regex in a list of files"""
+
+#     files = [file for file in subfolder_path]
+#     all_matches = flatten([re.findall(regex, get_text_from_file(fp))
+#                            for fp in file_paths])
+#     counts = Counter(all_matches)
+#     counter_to_csv(counts, output_fp)
+
+
+# === WINDOW LAYOUT ===
 
 file_list_column = [
     [
@@ -29,7 +58,6 @@ file_list_column = [
     ],
 ]
 
-# For now will only show the name of the file that was chosen
 text_display_column = [
     [
         sg.Text("Find:"),
@@ -39,12 +67,14 @@ text_display_column = [
     ],
     [
         sg.Multiline(
-            key="-PREVIEW-",
-            size=(200, 100))
+            key="-BEFORE-",
+            size=(100, 100)),
+        sg.Multiline(
+            key="-AFTER-",
+            size=(100, 100))
     ]
 ]
 
-# ----- Full layout -----
 layout = [
     [
         sg.Column(file_list_column),
@@ -53,76 +83,61 @@ layout = [
     ]
 ]
 
+# === INITIALIZE WINDOW ===
+
 window = sg.Window("Corpus Cleaner", layout).Finalize()
 window.Maximize()
 
-# Run the Event Loop
+
+# === CHECK FOR DEBUG MODE ===
+
+args = get_args()
+debug = int(args.debug)
+if debug:
+    print('Debug mode.')
+    root_folder_path = DEBUG_FOLDER
+    update_subfolders(window, root_folder_path)
+
+# === EVENT LOOP ===
+
+find_re = ""
+replace_re = ""
+
 while True:
+
     event, values = window.read()
+
+    # --- EXIT PROGRAM ---
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
-    # Folder name was filled in, make a list of files in the folder
+
+    # --- ROOT FOLDER CHANGED ---
     if event == "-FOLDER-":
-        root_folder = values["-FOLDER-"]
-        try:
-            # Get list of files in folder
-            file_list = os.listdir(root_folder)
-        except Exception as e:
-            print(e)
-            file_list = []
+        root_folder_path = values["-FOLDER-"]
+        update_subfolders(window, root_folder_path)
 
-        fnames = [
-            sf for sf in file_list
-            if os.path.isdir(os.path.join(root_folder, sf))
-        ]
-        window["-SUBFOLDER-"].update(fnames)
-
+    # --- SUBFOLDER CHANGED ---
     elif event == "-SUBFOLDER-":
-        subfolder = values["-SUBFOLDER-"][0]
-        try:
-            # Get list of files in folder
-            file_list = os.listdir(os.path.join(root_folder, subfolder))
-        except Exception as e:
-            print(e)
-            file_list = []
+        subfolder_name = values["-SUBFOLDER-"][0]
+        subfolder_path = join(root_folder_path, subfolder_name)
+        update_files(window, subfolder_path)
 
-        fnames = [
-            sf for sf in file_list
-            if os.path.isfile(os.path.join(root_folder, subfolder, sf))
-        ]
-        window["-FILE-"].update(fnames)
-
+    # --- FILE CHANGED ---
     elif event == "-FILE-":
-        FILE = values["-FILE-"][0]
-        text = get_text_from_file(os.path.join(root_folder, subfolder, FILE))
-        window["-PREVIEW-"].update(text)
+        file_name = values["-FILE-"][0]
+        file_path = join(subfolder_path, file_name)
+        text = get_text_from_file(file_path)
+        update_before(window, text, find_re, replace_re)
 
+    # --- 'FIND' REGEX CHANGED ---
     elif event == "-FIND-":
         find_re = values["-FIND-"]
-        try:
-            text_tagged = re.sub(rf'({find_re})', r'***\1***', text)
-        except re.error:
-            print("Not a valid regex!")
-            continue
-        text_parts = text_tagged.split('***')
-        window["-PREVIEW-"].update("")
-        for index, part in enumerate(text_parts):
-            if index % 2 == 0:            
-                window["-PREVIEW-"].update(part, append=True)
-            else:
-                window["-PREVIEW-"].update(part, background_color_for_value="red", append=True)
+        update_before(window, text, find_re, replace_re)
 
+    # --- 'REPLACE' REGEX CHANGED ---
+    elif event == "-REPLACE-":
+        replace_re = values["-REPLACE-"]
+        update_before(window, text, find_re, replace_re)
 
-
-    # elif event == "-FILE LIST-":  # A file was chosen from the listbox
-        # try:
-        #     filename = os.path.join(
-        #         values["-FOLDER-"], values["-FILE LIST-"][0]
-        #     )
-        #     window["-TOUT-"].update(filename)
-        #     window["-IMAGE-"].update(filename=filename)
-
-        # except:
-        #     pass
 
 window.close()
