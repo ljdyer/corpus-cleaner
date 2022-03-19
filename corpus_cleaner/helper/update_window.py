@@ -1,6 +1,14 @@
 from os import listdir
 from os.path import join, isdir, isfile
+from itertools import chain
 import re
+
+
+# ====================
+def flatten(lis_: list):
+    """Flatten a list of lists into a flat list"""
+
+    return list(chain(*lis_))
 
 
 # ====================
@@ -29,59 +37,54 @@ def get_txt_file_names(folder_path: str) -> list:
 
 
 # ====================
-def update_subfolders(window, root_folder_path: str):
+def get_txt_file_paths(folder_path: str) -> list:
 
-    sf_list = get_subfolder_names(root_folder_path)
-    window["-SUBFOLDER-"].update(sf_list)
-
-
-# ====================
-def update_files(window, subfolder_path: str):
-
-    f_list = get_txt_file_names(subfolder_path)
-    window["-FILE-"].update(f_list)
-
-
-# ====================
-def update_before(window, text: str, find_re: str, replace_re: str):
-
-    if not find_re:
-        window["-BEFORE-"].update(text)
-
+    txt_file_names = get_txt_file_names(folder_path)
+    if txt_file_names:
+        return [join(folder_path, fname) for fname in txt_file_names]
     else:
-        try:
-            text_tagged = re.sub(rf'({find_re})', r'***\1***', text)
-        except re.error:
-            print("Not a valid regex!")
-            return
-
-        text_parts = text_tagged.split('***')
-        window["-BEFORE-"].update("")
-        for index, part in enumerate(text_parts):
-            if index % 2 == 0:
-                window["-BEFORE-"].update(part, append=True)
-            else:
-                window["-BEFORE-"].update(
-                    part, background_color_for_value="red", append=True
-                )
-
-        if replace_re:
-            try:
-                text_tagged = re.sub(
-                    rf'{find_re}', rf'***{replace_re}***', text
-                )
-            except re.error:
-                print("Not a valid regex!")
-                return
-
-            text_parts = text_tagged.split('***')
-            window["-AFTER-"].update("")
-            for index, part in enumerate(text_parts):
-                if index % 2 == 0:
-                    window["-AFTER-"].update(part, append=True)
-                else:
-                    window["-AFTER-"].update(
-                        part, background_color_for_value="green", append=True
-                    )
+        return []
 
 
+# ====================
+def get_txt_file_names_and_paths(folder_path: str) -> list:
+
+    txt_file_names = get_txt_file_names(folder_path)
+    if txt_file_names:
+        return [(fname, join(folder_path, fname)) for fname in txt_file_names]
+    else:
+        return []
+
+
+# ====================
+def multiline_print_with_regex_highlight(multiline,
+                                         text: str,
+                                         highlight_color: str,
+                                         find_re: str,
+                                         replace_re: str = None):
+
+    if replace_re:
+        replace_re = rf'***{replace_re}***'
+        find_re = rf'{find_re}'
+    else:
+        replace_re = r'***\1***'
+        find_re = rf'({find_re})'
+
+    try:
+        text_tagged = re.sub(find_re, replace_re, text)
+    except re.error:
+        print("Not a valid regex!")
+        return
+
+    text_parts = text_tagged.split('***')
+    multiline.update("")
+
+    for index, part in enumerate(text_parts):
+        if index % 2 == 0:
+            multiline.update(part, append=True)
+        else:
+            multiline.update(
+                part,
+                background_color_for_value=highlight_color,
+                append=True
+            )
