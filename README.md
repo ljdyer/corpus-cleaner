@@ -102,7 +102,7 @@ I can see that brackets are primarily used for adding extra information about th
 
 <img src="readme-img/11.PNG"></img>
 
-Clicking on a file shows that file selects it in the left-hand file selection list and updates the before/after preview above.
+Clicking on a file selects it in the left-hand file selection list and updates the before/after preview above.
 
 <img src="readme-img/12.PNG"></img>
 
