@@ -33,7 +33,7 @@ def get_txt_file_names(folder_path: str) -> list:
     except Exception as e:
         print(e)
         f_list = []
-    return f_list
+    return natural_sort(f_list)
 
 
 # ====================
@@ -88,3 +88,31 @@ def multiline_print_with_regex_highlight(multiline,
                 background_color_for_value=highlight_color,
                 append=True
             )
+
+
+def get_num_part_or_zero(string: str):
+
+    num_part = ''.join([c for c in string if c.isnumeric()])
+    try:
+        return int(num_part)
+    except ValueError:
+        return 0
+
+
+def natural_sort(fnames: list) -> list:
+
+    fnames = list(sorted(
+        fnames,
+        key=lambda fn: (
+            ''.join([c for c in fn if c.isalpha()]),
+            get_num_part_or_zero(fn)
+        )
+    ))
+    return fnames
+
+
+# ====================
+def save_text_to_file(text: str, file_path: str):
+
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(text)

@@ -3,11 +3,13 @@
 import argparse
 import re
 from collections import Counter
-from os.path import join
+from os.path import join, isdir
+from os import mkdir
+from datetime import datetime
 
 import PySimpleGUI as sg
 
-from helper.helper import get_text_from_file
+from helper.helper import get_text_from_file, save_text_to_file
 from helper.update_window import (flatten, get_subfolder_names,
                                   get_txt_file_names,
                                   get_txt_file_names_and_paths,
@@ -61,7 +63,7 @@ def handle_subfolder_change(window, subfolder_path: str):
 
 
 # ====================
-def handle_file_change(window, text: str, find_re: str, replace_re: str):
+def handle_file_change(window, text: str, find_re: str, replace_re: str = ""):
 
     update_before_after(window, text, find_re, replace_re)
 
@@ -78,6 +80,7 @@ def clear_find_replace_inputs(window):
 
     window["-FIND-"].update("")
     window["-REPLACE-"].update("")
+    reset_occurrence_info(window)
 
 
 # ====================
@@ -117,10 +120,11 @@ def show_occurences(window, find_re: str, subfolder_path: str):
     counts = Counter(all_matches)
     count_list = [f'{instance}: {count}'
                   for instance, count in counts.most_common()]
-    window["-INSTANCES-"].update(count_list)
+    window["-INSTANCES-"].update(count_list, disabled=False)
     window["-FILES_IN-"].update("")
 
 
+# ====================
 def show_files_in(substr: str, subfolder_path: str):
 
     file_names_and_paths = get_txt_file_names_and_paths(subfolder_path)
@@ -130,15 +134,81 @@ def show_files_in(substr: str, subfolder_path: str):
         if substr in get_text_from_file(fpath)
     ]
     count_list = [f'{fname}: {count}'
-                  for fname, count in sorted(counts, key=lambda x: x[1])]
-    window["-FILES_IN-"].update(count_list)
+                  for fname, count in sorted(counts,
+                                             key=lambda x: x[1], reverse=True)]
+    window["-FILES_IN-"].update(count_list, disabled=False)
+
+
+# ====================
+def reset_occurrence_info(window):
+
+    window["-INSTANCES-"].update([])
+    window["-FILES_IN-"].update([])
+
+
+# ====================
+def get_listbox_index(listbox, value: str) -> int:
+
+    values = listbox.get_list_values()
+    return values.index(value)
+
+
+# ====================
+def save(window, root_folder_path: str, subfolder_name: str, find_re: str,
+         replace_re: str, save_folder_name: str, note: str):
+
+    subfolder_path = join(root_folder_path, subfolder_name)
+    save_folder_path = join(root_folder_path, save_folder_name)
+    if isdir(save_folder_path):
+        proceed = sg.PopupYesNo('A subfolder with this name already exists. Overwrite?')
+        if proceed != 'Yes':
+            return
+    else:
+        mkdir(save_folder_path)
+
+    if not find_re:
+        sg.PopupOK("'Find' regex is not defined.")
+        return
+    if not replace_re:
+        sg.PopupOK("'Replace' regex is not defined.")
+        return
+
+    before_files = get_txt_file_names_and_paths(subfolder_path)
+    for fn, fp in before_files:
+        before_text = get_text_from_file(fp).strip()
+        new_text = re.sub(find_re, replace_re, before_text)
+        new_fp = join(save_folder_path, fn)
+        save_text_to_file(new_text, new_fp)
+
+    # Update log file
+    update_save_log(root_folder_path, subfolder_name, save_folder_name, find_re, replace_re, note)
+
+    handle_folder_change(window, root_folder_path)
+
+
+# ====================
+def update_save_log(root_folder_path: str, subfolder_name: str, save_folder_name: str,
+                    find_re: str, replace_re: str, note: str):
+
+    with open(join(root_folder_path, 'log.txt'), 'a+', encoding='utf-8') as log_file:
+        lines = [
+            f'Time: {str(datetime.now())}',
+            f'Previous subfolder: {subfolder_name}',
+            f'New subfolder: {save_folder_name}',
+            f"'Find' regex: /{find_re}/",
+            f"'Replace' regex: /{replace_re}/",
+            f'Note: {note}',
+            '====================',
+            ''
+        ]
+        log_file.write('\n'.join(lines))
 
 
 # === WINDOW LAYOUT ===
 
-file_list_column = [
+FILE_SELECTION_COLUMN = [
     [
-        sg.Text("Corpus folder:"),
+        sg.Text("Root folder:"),
         sg.In(size=(20, 1), enable_events=True, key="-FOLDER-"),
         sg.FolderBrowse(),
     ],
@@ -154,56 +224,72 @@ file_list_column = [
     ],
 ]
 
-text_display_column = [
-    [
-        sg.Text("Find:"),
-        sg.In(size=(25, 1), enable_events=True, key="-FIND-"),
-        sg.Text("Replace:"),
-        sg.In(size=(25, 1), enable_events=True, key="-REPLACE-"),
-    ],
-    [
-        sg.Multiline(
-            key="-BEFORE-",
-            size=(100, 40)),
-        sg.Multiline(
-            key="-AFTER-",
-            size=(100, 40))
-    ],
-    [
-        sg.HSeparator()
-    ],
-    [
-        sg.Button("Update", key="-UPDATE-")
-    ],
-    [
-        sg.Listbox(
-            values=[],
-            enable_events=True,
-            size=(60, 25),
-            key="-INSTANCES-"
-        ),
-        sg.Listbox(
-            values=[],
-            enable_events=True,
-            size=(60, 25),
-            key="-FILES_IN-"
-        ),
-    ]
-
+FIND_REPLACE_INPUT_ROW = [
+    sg.Text("Find:"),
+    sg.In(size=(25, 1), enable_events=True, key="-FIND-"),
+    sg.Text("Replace:"),
+    sg.In(size=(25, 1), enable_events=True, key="-REPLACE-"),
 ]
 
-layout = [
+BEFORE_AFTER_PREVIEW_ROW = [
+    sg.Multiline(
+        key="-BEFORE-",
+        size=(100, 40)),
+    sg.Multiline(
+        key="-AFTER-",
+        size=(100, 40))
+]
+
+OCCURRENCE_INFO_COLUMN = [
+    [sg.Button("Update", key="-UPDATE-")],
     [
-        sg.Column(file_list_column),
+        sg.Listbox(values=[], enable_events=True, size=(60, 25), 
+                   key="-INSTANCES-", disabled=True),
+        sg.Listbox(values=[], enable_events=True, size=(60, 25),
+                   key="-FILES_IN-", disabled=True)
+    ]
+]
+
+SAVE_COLUMN = [
+    [
+        sg.Text("New folder name:"),
+        sg.In(size=(40, 1), key="-SAVE_FOLDER-"),
+    ],
+    [
+        sg.Text("Note (optional)"),
+        sg.In(size=(40, 1), key="-NOTE-"),
+    ],
+    [
+        sg.Button('Save', key="-SAVE-")
+    ]
+]
+
+MAIN_COLUMN = [
+    FIND_REPLACE_INPUT_ROW,
+    BEFORE_AFTER_PREVIEW_ROW,
+    [sg.HSeparator()],
+    [
+        sg.Column(OCCURRENCE_INFO_COLUMN),
         sg.VSeperator(),
-        sg.Column(text_display_column),
+        sg.Column(SAVE_COLUMN, vertical_alignment='t')
+    ]
+]
+
+WINDOW_LAYOUT = [
+    [
+        sg.Column(FILE_SELECTION_COLUMN),
+        sg.VSeperator(),
+        sg.Column(MAIN_COLUMN),
     ]
 ]
 
 # === INITIALIZE WINDOW ===
 
-window = sg.Window("Corpus Cleaner", layout).Finalize()
+window = sg.Window("Corpus Cleaner", WINDOW_LAYOUT).Finalize()
 window.Maximize()
+find_re = ""
+replace_re = ""
+text = ""
 
 
 # === CHECK FOR DEBUG MODE ===
@@ -213,12 +299,17 @@ debug = int(args.debug)
 if debug:
     print('Debug mode.')
     root_folder_path = DEBUG_FOLDER
+    window["-FOLDER-"].update(root_folder_path)
     handle_folder_change(window, root_folder_path)
+    subfolder_path = join(root_folder_path, 'original')
+    handle_subfolder_change(window, subfolder_path)
+    file_path = join(subfolder_path, '1.txt')
+    text = get_text_from_file(file_path).strip()
+    find_re = 'm+'
+    handle_file_change(window, text, find_re)
+
 
 # === EVENT LOOP ===
-
-find_re = ""
-replace_re = ""
 
 while True:
 
@@ -234,7 +325,7 @@ while True:
         handle_folder_change(window, root_folder_path)
 
     # --- SUBFOLDER CHANGED ---
-    elif event == "-SUBFOLDER-":
+    elif event == "-SUBFOLDER-" and values["-SUBFOLDER-"]:
         subfolder_name = values["-SUBFOLDER-"][0]
         subfolder_path = join(root_folder_path, subfolder_name)
         handle_subfolder_change(window, subfolder_path)
@@ -243,12 +334,13 @@ while True:
     elif event == "-FILE-" and values['-FILE-']:
         file_name = values["-FILE-"][0]
         file_path = join(subfolder_path, file_name)
-        text = get_text_from_file(file_path)
+        text = get_text_from_file(file_path).strip()
         handle_file_change(window, text, find_re, replace_re)
 
     # --- 'FIND' REGEX CHANGED ---
     elif event == "-FIND-":
         find_re = values["-FIND-"]
+        reset_occurrence_info(window)
         update_before_after(window, text, find_re, replace_re)
 
     # --- 'REPLACE' REGEX CHANGED ---
@@ -260,11 +352,24 @@ while True:
     elif event == "-UPDATE-":
         show_occurences(window, find_re, subfolder_path)
 
-    elif event == "-INSTANCES-":
+    elif event == "-INSTANCES-" and values["-INSTANCES-"]:
         substr = values["-INSTANCES-"][0].rpartition(':')[0]
-
         show_files_in(substr, subfolder_path)
 
+    elif event == "-FILES_IN-" and values["-FILES_IN-"]:
+        file_name = values["-FILES_IN-"][0].rpartition(':')[0]
+        file_path = join(subfolder_path, file_name)
+        index = get_listbox_index(window["-FILE-"], file_name)
+        window["-FILE-"].update(set_to_index=index, scroll_to_index=index-5)
+        text = get_text_from_file(file_path).strip()
+        handle_file_change(window, text, find_re, replace_re)
+
+    # --- 'SAVE' BUTTON CLICKED ---
+    elif event == "-SAVE-":
+        save_folder_name = values["-SAVE_FOLDER-"]
+        note = values["-NOTE-"]
+        save(window, root_folder_path, subfolder_name,
+             find_re, replace_re, save_folder_name, note)
 
 
 window.close()
