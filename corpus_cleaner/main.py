@@ -94,12 +94,8 @@ def update_before_after(window, text: str, find_re: str,
 
     multiline_print_with_regex_highlight(window["-BEFORE-"], text,
                                          "red", find_re)
-
-    if replace_re:
-        multiline_print_with_regex_highlight(window["-AFTER-"], text, "green",
-                                             find_re, replace_re)
-    else:
-        window["-AFTER-"].update("")
+    multiline_print_with_regex_highlight(window["-AFTER-"], text, "green",
+                                         find_re, replace_re)
 
 
 # ====================
@@ -117,6 +113,8 @@ def show_occurences(window, find_re: str, subfolder_path: str):
     except re.error:
         print('Invalid regex.')
         return
+    all_matches = [match[0] if isinstance(match, tuple) else match
+                   for match in all_matches]
     counts = Counter(all_matches)
     count_list = [f'{instance}: {count}'
                   for instance, count in counts.most_common()]
@@ -160,7 +158,8 @@ def save(window, root_folder_path: str, subfolder_name: str, find_re: str,
     subfolder_path = join(root_folder_path, subfolder_name)
     save_folder_path = join(root_folder_path, save_folder_name)
     if isdir(save_folder_path):
-        proceed = sg.PopupYesNo('A subfolder with this name already exists. Overwrite?')
+        proceed = sg.PopupYesNo('A subfolder with this name already exists.',
+                                'Overwrite?')
         if proceed != 'Yes':
             return
     else:
@@ -181,7 +180,8 @@ def save(window, root_folder_path: str, subfolder_name: str, find_re: str,
         save_text_to_file(new_text, new_fp)
 
     # Update log file
-    update_save_log(root_folder_path, subfolder_name, save_folder_name, find_re, replace_re, note)
+    update_save_log(root_folder_path, subfolder_name, save_folder_name,
+                    find_re, replace_re, note)
 
     handle_folder_change(window, root_folder_path)
 
@@ -204,6 +204,17 @@ def update_save_log(root_folder_path: str, subfolder_name: str, save_folder_name
         log_file.write('\n'.join(lines))
 
 
+def add_spot_change_to_log(file_name: str):
+    with open(join(root_folder_path, 'log.txt'), 'a+', encoding='utf-8') as log_file:
+        lines = [
+            f'Time: {str(datetime.now())}',
+            f'Spot change to file: {file_name}',
+            '====================',
+            ''
+        ]
+        log_file.write('\n'.join(lines))
+
+
 # === WINDOW LAYOUT ===
 
 FILE_SELECTION_COLUMN = [
@@ -215,7 +226,7 @@ FILE_SELECTION_COLUMN = [
     [
         sg.Listbox(
             values=[], enable_events=True, size=(40, 20), key="-SUBFOLDER-"
-        )
+        ),
     ],
     [
         sg.Listbox(
@@ -241,7 +252,9 @@ BEFORE_AFTER_PREVIEW_ROW = [
 ]
 
 OCCURRENCE_INFO_COLUMN = [
-    [sg.Button("Update", key="-UPDATE-")],
+    [
+        sg.Button("Update", key="-UPDATE-")
+    ],
     [
         sg.Listbox(values=[], enable_events=True, size=(60, 25), 
                    key="-INSTANCES-", disabled=True),
@@ -267,6 +280,7 @@ SAVE_COLUMN = [
 MAIN_COLUMN = [
     FIND_REPLACE_INPUT_ROW,
     BEFORE_AFTER_PREVIEW_ROW,
+    [sg.Button('Save changes', key="-SAVE_CHANGES-")],
     [sg.HSeparator()],
     [
         sg.Column(OCCURRENCE_INFO_COLUMN),
@@ -340,11 +354,13 @@ while True:
     # --- 'FIND' REGEX CHANGED ---
     elif event == "-FIND-":
         find_re = values["-FIND-"]
+        replace_re = values["-REPLACE-"]
         reset_occurrence_info(window)
         update_before_after(window, text, find_re, replace_re)
 
     # --- 'REPLACE' REGEX CHANGED ---
     elif event == "-REPLACE-":
+        find_re = values["-FIND-"]
         replace_re = values["-REPLACE-"]
         update_before_after(window, text, find_re, replace_re)
 
@@ -370,6 +386,13 @@ while True:
         note = values["-NOTE-"]
         save(window, root_folder_path, subfolder_name,
              find_re, replace_re, save_folder_name, note)
-
+    
+    # --- 'SAVE CHANGES' BUTTON CLICKED ---
+    elif event == "-SAVE_CHANGES-":
+        text = values["-BEFORE-"]
+        save_path = file_path
+        save_text_to_file(text, file_path)
+        handle_folder_change(window, root_folder_path)
+        add_spot_change_to_log(file_name)
 
 window.close()

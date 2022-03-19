@@ -106,7 +106,7 @@ Clicking on a file selects it in the left-hand file selection list and updates t
 
 <img src="readme-img/12.PNG"></img>
 
-I can see that this it occurs in the context of talking about [401(k) plans](https://www.investopedia.com/terms/1/401kplan.asp). This is relevant information that I don't want to lose altogether, but I can't keep brackets in the final version of the corpus for my use case, so I decide to replace all instances of '401(k)' with '401k' as the first step before coming back to remove remaining bracketed expressions.
+I can see that '(k)' occurs in the context of talking about [401(k) plans](https://www.investopedia.com/terms/1/401kplan.asp). This is relevant information that I don't want to lose altogether, but I can't keep brackets in the final version of the corpus for my use case, so I decide to replace all instances of '401(k)' with '401k' as the first step before coming back to remove remaining bracketed expressions.
 
 ## Saving an 'iteration' of the corpus
 

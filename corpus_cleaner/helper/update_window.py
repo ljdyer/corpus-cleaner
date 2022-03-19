@@ -63,7 +63,7 @@ def multiline_print_with_regex_highlight(multiline,
                                          find_re: str,
                                          replace_re: str = None):
 
-    if replace_re:
+    if replace_re is not None:
         replace_re = rf'***{replace_re}***'
         find_re = rf'{find_re}'
     else:
