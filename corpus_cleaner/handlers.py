@@ -11,9 +11,9 @@ import PySimpleGUI as sg
 from helper.helper import (append_text_to_file, flatten, get_listbox_index,
                            get_subfolder_names, get_text_from_file,
                            get_txt_file_names, get_txt_file_names_and_paths,
-                           get_txt_file_paths,
-                           multiline_print_with_regex_highlight,
-                           save_text_to_file)
+                           get_txt_file_paths, save_text_to_file)
+
+SPLITTER_STRING = "+^*"
 
 
 # === EVENT HANDLERS ===
@@ -27,7 +27,6 @@ def handle_folder_change(window, values):
     window["-SUBFOLDER-"].update(sf_list)
     window["-FILE-"].update([])
     clear_before_after(window)
-    clear_find_replace(window)
 
 
 # ====================
@@ -40,7 +39,6 @@ def handle_subfolder_change(window, values):
     f_list = get_txt_file_names(subfolder_path)
     window["-FILE-"].update(f_list)
     clear_before_after(window)
-    clear_find_replace(window)
 
 
 # ====================
@@ -71,19 +69,74 @@ def handle_replace_re_change(window, values):
 # ====================
 def update_before_after(window, values):
 
+    if update_before(window, values):
+        update_after(window, values)
+
+
+# ====================
+def update_before(window, values):
+
     find_re = values["-FIND-"]
-    replace_re = values["-REPLACE-"]
     text = window["-BEFORE-"].get()
 
     if not find_re:
         window["-BEFORE-"].update(text)
         window["-AFTER-"].update(text)
+        return False
+
+    try:
+        re.compile(find_re)
+    except re.error:
+        window["-FIND-"].update(background_color="yellow")
+        window["-UPDATE-"].update(disabled=True)
+        return False
+
+    window["-FIND-"].update(background_color="white")
+    window["-UPDATE-"].update(disabled=False)
+    text_tagged = re.sub(rf'({find_re})',
+                         rf'{SPLITTER_STRING}\1{SPLITTER_STRING}',
+                         text)
+    text_parts = text_tagged.split(SPLITTER_STRING)
+    print_to_multiline_with_highlights(window["-BEFORE-"], text_parts, "red")
+    return True
+
+
+# ====================
+def update_after(window, values):
+
+    find_re = values["-FIND-"]
+    replace_re = values["-REPLACE-"]
+    text = window["-BEFORE-"].get()
+
+    try:
+        re.sub(find_re, replace_re, '')
+    except re.error:
+        window["-REPLACE-"].update(background_color="yellow")
         return
 
-    multiline_print_with_regex_highlight(window["-BEFORE-"], text,
-                                         "red", find_re)
-    multiline_print_with_regex_highlight(window["-AFTER-"], text, "green",
-                                         find_re, replace_re)
+    window["-REPLACE-"].update(background_color="white")
+    text_tagged = re.sub(rf'{find_re}',
+                         rf'{SPLITTER_STRING}{replace_re}{SPLITTER_STRING}',
+                         text)
+    text_parts = text_tagged.split(SPLITTER_STRING)
+    print_to_multiline_with_highlights(window["-AFTER-"], text_parts, "green")
+
+
+# ====================
+def print_to_multiline_with_highlights(multiline,
+                                       text_parts: list,    
+                                       highlight_color: str):
+
+    multiline.update("")
+    for index, part in enumerate(text_parts):
+        if index % 2 == 0:
+            multiline.update(part, append=True)
+        else:
+            multiline.update(
+                part,
+                background_color_for_value=highlight_color,
+                append=True
+            )
 
 
 # ====================
@@ -93,18 +146,13 @@ def handle_update_click(window, values):
     subfolder_path = get_subfolder_path(values)
 
     if not find_re:
-        window["-INSTANCES-"].update("")
-        window["-FILES_IN-"].update("")
+        window["-INSTANCES-"].update([])
+        window["-FILES_IN-"].update([])
         return
 
     file_paths = get_txt_file_paths(subfolder_path)
-    try:
-        all_matches = flatten([re.findall(find_re, get_text_from_file(fp))
-                               for fp in file_paths])
-    except re.error:
-        sg.PopupOK("'Find' regex is invalid.")
-        return
-
+    all_matches = flatten([re.findall(find_re, get_text_from_file(fp))
+                           for fp in file_paths])
     all_matches = [match[0] if isinstance(match, tuple) else match
                    for match in all_matches]
     counts = Counter(all_matches)
@@ -167,9 +215,6 @@ def handle_save_click(window, values):
     if not find_re:
         sg.PopupOK("'Find' regex is not defined.")
         return
-    if not replace_re:
-        sg.PopupOK("'Replace' regex is not defined.")
-        return
 
     # Generate new files
     old_files = get_txt_file_names_and_paths(old_subfolder_path)
@@ -201,7 +246,7 @@ def handle_save_click(window, values):
 def handle_save_changes_click(window, values):
 
     text = values["-BEFORE-"]
-    file_path = get_file_path(values)
+    file_path = get_file_path(window)
     save_text_to_file(text, file_path)
 
     log_lines = [

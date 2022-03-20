@@ -1,8 +1,6 @@
-import re
 from itertools import chain
 from os import listdir
-from os.path import isdir, isfile, join
-
+from os.path import isdir, join
 
 # === FILES AND FOLDERS ===
 
@@ -106,40 +104,6 @@ def flatten(lis_: list):
 
 
 # === PYSIMPLEGUI ELEMENTS ===
-
-# ====================
-def multiline_print_with_regex_highlight(multiline,
-                                         text: str,
-                                         highlight_color: str,
-                                         find_re: str,
-                                         replace_re: str = None):
-
-    if replace_re is not None:
-        replace_re = rf'***{replace_re}***'
-        find_re = rf'{find_re}'
-    else:
-        replace_re = r'***\1***'
-        find_re = rf'({find_re})'
-
-    try:
-        text_tagged = re.sub(find_re, replace_re, text)
-    except re.error:
-        print("Not a valid regex!")
-        return
-
-    text_parts = text_tagged.split('***')
-    multiline.update("")
-
-    for index, part in enumerate(text_parts):
-        if index % 2 == 0:
-            multiline.update(part, append=True)
-        else:
-            multiline.update(
-                part,
-                background_color_for_value=highlight_color,
-                append=True
-            )
-
 
 # ====================
 def get_listbox_index(listbox, value: str) -> int:
