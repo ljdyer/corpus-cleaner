@@ -10,7 +10,7 @@ from handlers import (handle_file_change, handle_files_in_click,
                       handle_find_re_change, handle_folder_change,
                       handle_replace_re_change, handle_save_changes_click,
                       handle_save_click, handle_subfolder_change,
-                      handle_substr_change, handle_update_click)
+                      handle_substr_change, handle_update_click, handle_lower_click, handle_normalize_click)
 from layout import WINDOW_LAYOUT
 
 DEBUG_FOLDER = "E:\\TED_Talks"
@@ -78,10 +78,14 @@ while True:
         handle_substr_change(window, values)
     elif event == "-FILES_IN-":
         handle_files_in_click(window, values)
-    elif event == "-SAVE-":
-        handle_save_click(window, values)
     elif event == "-SAVE_CHANGES-":
         handle_save_changes_click(window, values)
+    elif event == "-SAVE-":
+        handle_save_click(window, values)
+    elif event == "-NORMALIZE-":
+        handle_normalize_click(window, values)
+    elif event == "-LOWERCASE-":
+        handle_lower_click(window, values)
     else:
         print(f'Event not handled: {event}')
 

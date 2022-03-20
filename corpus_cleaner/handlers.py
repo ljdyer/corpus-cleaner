@@ -1,6 +1,7 @@
 # handlers.py
 
 import re
+import unicodedata
 from collections import Counter
 from datetime import datetime
 from os import mkdir
@@ -240,6 +241,85 @@ def handle_save_click(window, values):
 
     handle_folder_change(window, values)
     # TODO: Select newly-created subfolder
+
+
+# ====================
+def handle_normalize_click(window, values):
+
+    new_subfolder_name = values["-SAVE_FOLDER-"]
+    old_subfolder_path = get_subfolder_path(values)
+    new_subfolder_path = join(values["-FOLDER-"], new_subfolder_name)
+
+    if isdir(new_subfolder_path):
+        proceed = sg.PopupYesNo('A subfolder with this name already exists.',
+                                'Overwrite?')
+        if proceed != 'Yes':
+            return
+    else:
+        mkdir(new_subfolder_path)
+
+    # Generate new files
+    old_files = get_txt_file_names_and_paths(old_subfolder_path)
+    for fn, fp in old_files:
+        old_text = get_text_from_file(fp).strip()
+        new_text = (unicodedata.normalize('NFKD', old_text)
+                    .encode('ascii', 'ignore').decode('utf8'))
+        new_fp = join(new_subfolder_path, fn)
+        save_text_to_file(new_text, new_fp)
+
+    # Update log file
+    log_lines = [
+        f'Time: {str(datetime.now())}',
+        f'Previous subfolder: {values["-SUBFOLDER-"]}',
+        f'New subfolder: {new_subfolder_name}',
+        'Normalized all files (removed diacritics).',
+        f'Note: {values["-NOTE-"]}',
+        '===================='
+    ]
+    log_text = '\n'.join(log_lines) + "\n\n"
+    log_file_path = get_log_file_path(values)
+    append_text_to_file(log_text, log_file_path)
+
+    handle_folder_change(window, values)
+
+
+# ====================
+def handle_lower_click(window, values):
+
+    new_subfolder_name = values["-SAVE_FOLDER-"]
+    old_subfolder_path = get_subfolder_path(values)
+    new_subfolder_path = join(values["-FOLDER-"], new_subfolder_name)
+
+    if isdir(new_subfolder_path):
+        proceed = sg.PopupYesNo('A subfolder with this name already exists.',
+                                'Overwrite?')
+        if proceed != 'Yes':
+            return
+    else:
+        mkdir(new_subfolder_path)
+
+    # Generate new files
+    old_files = get_txt_file_names_and_paths(old_subfolder_path)
+    for fn, fp in old_files:
+        old_text = get_text_from_file(fp).strip()
+        new_text = old_text.lower()
+        new_fp = join(new_subfolder_path, fn)
+        save_text_to_file(new_text, new_fp)
+
+    # Update log file
+    log_lines = [
+        f'Time: {str(datetime.now())}',
+        f'Previous subfolder: {values["-SUBFOLDER-"]}',
+        f'New subfolder: {new_subfolder_name}',
+        'Converted all files to lowercase',
+        f'Note: {values["-NOTE-"]}',
+        '===================='
+    ]
+    log_text = '\n'.join(log_lines) + "\n\n"
+    log_file_path = get_log_file_path(values)
+    append_text_to_file(log_text, log_file_path)
+
+    handle_folder_change(window, values)
 
 
 # ====================

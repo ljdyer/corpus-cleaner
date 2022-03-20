@@ -56,14 +56,16 @@ SAVE_COLUMN = [
         sg.In(size=(40, 1), key="-NOTE-"),
     ],
     [
-        sg.Button('Save', key="-SAVE-")
+        sg.Button('Replace in all files', key="-SAVE-"),
+        sg.Button('Normalize unicode (remove diacritics)', key="-NORMALIZE-", button_color="red"),
+        sg.Button('Convert all to lowercase', key="-LOWERCASE-", button_color="red")
     ]
 ]
 
 MAIN_COLUMN = [
     FIND_REPLACE_INPUT_ROW,
     BEFORE_AFTER_PREVIEW_ROW,
-    [sg.Button('Save changes', key="-SAVE_CHANGES-")],
+    [sg.Button('Save changes to this file', key="-SAVE_CHANGES-")],
     [sg.HSeparator()],
     [
         sg.Column(OCCURRENCE_INFO_COLUMN),

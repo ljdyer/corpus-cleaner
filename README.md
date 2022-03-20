@@ -38,31 +38,31 @@ TED_Talks/
 
 The corpus is made up of text files of transcripts for each of the TED Talks available at [ted.com](https://www.ted.com/) as of 1st May 2020.
 
-## Launch the program
+### Launch the program
 
 Here's what the program looks like when first opened:
 
 <img src="readme-img/00.PNG"></img>
 
-## Select the root folder
+### Select the root folder
 
 Type/paste the path into the input box, or use the 'Browse' button.
 
 <img src="readme-img/01.PNG"></img>
 
-## Select a subfolder
+### Select a subfolder
 
 You should now see all available subfolders listed in the listbox below. Click on one to select it.
 
 <img src="readme-img/02.PNG"></img>
 
-## Select a file
+### Select a file
 
 You should now see all .txt files in the subfolder listed in the listbox below. Click on one to select it.
 
 <img src="readme-img/03.PNG"></img>
 
-## Preview find+replace operations on individual files
+### Preview find+replace operations on individual files
 
 You should now see the text from the selected file in the leftmost of the two large text areas in the middle of the window.
 
@@ -88,7 +88,7 @@ For my use case, I wanted to find all expressions inside brackets, including any
 
 As before, I can click through files on the left to preview the result of making changes. But before commiting to this change, I want to convince myself that there are no edge cases that will lead to unintended results on the text in my corpus.
 
-## Get a broader overview of the effect of the operation over the whole corpus
+### Get a broader overview of the effect of the operation over the whole corpus
 
 The section underneath the file preview section on the left is the corpus occurrence overview section.
 
@@ -108,7 +108,7 @@ Clicking on a file selects it in the left-hand file selection list and updates t
 
 I can see that '(k)' occurs in the context of talking about [401(k) plans](https://www.investopedia.com/terms/1/401kplan.asp). This is relevant information that I don't want to lose altogether, but I can't keep brackets in the final version of the corpus for my use case, so I decide to replace all instances of '401(k)' with '401k' as the first step before coming back to remove remaining bracketed expressions.
 
-## Saving an 'iteration' of the corpus
+### Save an 'iteration' of the corpus
 
 I've put in the new find and replace regexes and confirmed the changes, and now I'm ready to save a new iteration of my corpus.
 
