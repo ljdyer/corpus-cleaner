@@ -44,7 +44,7 @@ Here's what the program looks like when first opened:
 
 <img src="readme-img/00.PNG"></img>
 
-*Note: several new features have been added to the program since this documentation was compiled, so you will see more buttons when you open the program, and the program will behave in a slightly different (more user-friendly) way to that described. However, the basic principles remain the same. This documentation will be updated in the near future.*
+*Note: several new features have been added to the program since this documentation was compiled, so you will see more buttons when you launch the program and the program will behave in a slightly different (more user-friendly) way to that described. However, the basic principles remain the same. This documentation will be updated in the near future.*
 
 ### Select the root folder
 
