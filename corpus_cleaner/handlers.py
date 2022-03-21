@@ -14,39 +14,55 @@ from helper.helper import (append_text_to_file, flatten, get_listbox_index,
                            get_txt_file_names, get_txt_file_names_and_paths,
                            get_txt_file_paths, save_text_to_file)
 
+# An unusual series of characters thought very unlikely to appear naturally in
+# the corpus used as a temporary marker.
 SPLITTER_STRING = "+^*"
 
 
 # === EVENT HANDLERS ===
 
 # ====================
-def handle_folder_change(window, values):
-    """Handle change to folder selection"""
+def handle_folder_change(window, values, go_to_subfolder: str = None):
+    """Handle change to folder selection.
+
+    If go_to_subfolder is specified, select that subfolder"""
 
     root_folder_path = values["-FOLDER-"]
     sf_list = get_subfolder_names(root_folder_path)
     window["-SUBFOLDER-"].update(sf_list)
     window["-FILE-"].update([])
-    clear_before_after(window)
+    if go_to_subfolder:
+        index = get_listbox_index(window["-SUBFOLDER-"], go_to_subfolder)
+        window["-SUBFOLDER-"].update(set_to_index=index,
+                                     scroll_to_index=index-3)
+        handle_subfolder_change(window, values)
+    else:
+        clear_before_after(window)
 
 
 # ====================
 def handle_subfolder_change(window, values):
-    """Handle change to subfolder selection"""
+    """Handle change to subfolder selection."""
 
     if not values["-SUBFOLDER-"]:
         return
     subfolder_path = get_subfolder_path(values)
+    # Populate file list
     f_list = get_txt_file_names(subfolder_path)
     window["-FILE-"].update(f_list)
-    clear_before_after(window)
+    # Select first file in list, if there is one
+    if f_list:
+        window["-FILE-"].update(set_to_index=0)
+        handle_file_change(window, values)
+    else:
+        clear_before_after(window)
 
 
 # ====================
 def handle_file_change(window, values):
     """Handle change to file selection"""
 
-    if not values["-FILE-"]:
+    if not window["-FILE-"].get():
         return
     file_path = get_file_path(window)
     text = get_text_from_file(file_path).strip()
@@ -239,8 +255,7 @@ def handle_save_click(window, values):
     log_file_path = get_log_file_path(values)
     append_text_to_file(log_text, log_file_path)
 
-    handle_folder_change(window, values)
-    # TODO: Select newly-created subfolder
+    handle_folder_change(window, values, go_to_subfolder=new_subfolder_name)
 
 
 # ====================
@@ -280,7 +295,7 @@ def handle_normalize_click(window, values):
     log_file_path = get_log_file_path(values)
     append_text_to_file(log_text, log_file_path)
 
-    handle_folder_change(window, values)
+    handle_folder_change(window, values, go_to_subfolder=new_subfolder_name)
 
 
 # ====================
@@ -319,7 +334,7 @@ def handle_lower_click(window, values):
     log_file_path = get_log_file_path(values)
     append_text_to_file(log_text, log_file_path)
 
-    handle_folder_change(window, values)
+    handle_folder_change(window, values, go_to_subfolder=new_subfolder_name)
 
 
 # ====================
